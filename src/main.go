@@ -1,44 +1,46 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"time"
 
+	"github.com/alexgeraldo/discord-bot/commands"
+	"github.com/alexgeraldo/discord-bot/config"
+	"github.com/alexgeraldo/discord-bot/events"
+	"github.com/alexgeraldo/discord-bot/tasks"
 	"github.com/bwmarrin/discordgo"
+	"github.com/robfig/cron/v3"
 )
 
 // Bot parameters
 var (
-	GuildID        = flag.String("guild", "", "Test guild ID. If not passed - bot registers commands globally")
-	BotToken       = flag.String("token", "", "Bot access token")
-	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
+	guildID        = config.GetEnv("guild", "") // GuildID to register commands. If not passed - bot registers commands globally.
+	botToken       = config.GetEnv("token", "")
+	removeCommands = config.GetEnvAsBool("rmcmd", true)
 )
 
 // Bot commands
 var (
 	commandsList = []*discordgo.ApplicationCommand{
-		commands.helloCommand,
+		commands.HelloCommand,
+		commands.RoastCommand,
 	}
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"hello": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			// Answer with 'World!" to complete user message
-			log.Printf("Completing %v for 'Hello World!' message\n", i.Member.User.Username)
-			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "World!",
-				},
-			})
+		"hello": commands.HelloHandler,
+		"roast": commands.RoastHandler,
+	}
+)
 
-			// Handle error
-			if err != nil {
-				log.Fatal(err)
-			}
-		},
+// Bot events
+var (
+	eventHandlers = []interface{}{
+		interactionHandler,
+		events.OnJoinHandler,
+		events.OnLeaveHandler,
 	}
 )
 
@@ -74,19 +76,19 @@ func interactionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func main() {
-	// Get discord bot token
-	TOKEN := "TOKEN HERE"
 
 	// Create discord bot session
-	s, err := discordgo.New("Bot " + TOKEN)
+	s, err := discordgo.New("Bot " + botToken)
 
 	// Check if an error happened creating session
 	if err != nil {
 		log.Fatalf("Error starting bot session: %v", err)
 	}
 
-	// Add interaction handler to the bot
-	s.AddHandler(interactionHandler)
+	// Add bot event handlers
+	for _, handler := range eventHandlers {
+		s.AddHandler(handler)
+	}
 
 	// Start the discord bot session
 	err = s.Open()
@@ -94,16 +96,34 @@ func main() {
 		log.Fatalf("Cannot open the session: %v", err)
 	}
 
+	// Create cron schedule for tasks
+	c := cron.New()
+
+	// RSS Feed last checked memory variable
+	rssLastChecked := time.Now()
+
+	// Add tasks to cron scheduler
+	log.Println("Adding cron tasks...")
+	log.Println("Checking for new animes in the RSS feed...")
+	tasks.NotifyNewAnime(s, "1030120857030361149", &rssLastChecked)
+	c.AddFunc("@every 5m", func() {
+		log.Println("Checking for new animes in the RSS feed...")
+		tasks.NotifyNewAnime(s, "1030120857030361149", &rssLastChecked)
+	})
+
 	// Register slash commands to the bot
 	log.Println("Adding commands...")
-	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
-	for i, v := range commands {
-		cmd, err := s.ApplicationCommandCreate(s.State.User.ID, *GuildID, v)
+	registeredCommands := make([]*discordgo.ApplicationCommand, len(commandsList))
+	for i, v := range commandsList {
+		cmd, err := s.ApplicationCommandCreate(s.State.User.ID, guildID, v)
 		if err != nil {
 			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
 		}
 		registeredCommands[i] = cmd
 	}
+
+	// Start cron scheduler
+	c.Start()
 
 	defer s.Close()
 
@@ -113,19 +133,11 @@ func main() {
 	log.Println("Press Ctrl+C to exit")
 	<-stop
 
-	if *RemoveCommands {
+	if removeCommands {
 		log.Println("Removing commands...")
-		// // We need to fetch the commands, since deleting requires the command ID.
-		// // We are doing this from the returned commands on line 375, because using
-		// // this will delete all the commands, which might not be desirable, so we
-		// // are deleting only the commands that we added.
-		// registeredCommands, err := s.ApplicationCommands(s.State.User.ID, *GuildID)
-		// if err != nil {
-		// 	log.Fatalf("Could not fetch registered commands: %v", err)
-		// }
 
 		for _, v := range registeredCommands {
-			err := s.ApplicationCommandDelete(s.State.User.ID, *GuildID, v.ID)
+			err := s.ApplicationCommandDelete(s.State.User.ID, guildID, v.ID)
 			if err != nil {
 				log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
 			}
