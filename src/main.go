@@ -20,6 +20,7 @@ var (
 	guildID        = config.GetEnv("guild", "") // GuildID to register commands. If not passed - bot registers commands globally.
 	botToken       = config.GetEnv("token", "")
 	removeCommands = config.GetEnvAsBool("rmcmd", true)
+	animeChatID    = config.GetEnv("animechat", "1030120857030361149")
 )
 
 // Bot commands
@@ -27,11 +28,13 @@ var (
 	commandsList = []*discordgo.ApplicationCommand{
 		commands.HelloCommand,
 		commands.RoastCommand,
+		commands.ElevatorCommand,
 	}
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"hello": commands.HelloHandler,
-		"roast": commands.RoastHandler,
+		"hello":    commands.HelloHandler,
+		"roast":    commands.RoastHandler,
+		"carousel": commands.ElevatorHandler,
 	}
 )
 
@@ -80,6 +83,8 @@ func main() {
 	// Create discord bot session
 	s, err := discordgo.New("Bot " + botToken)
 
+	s.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildVoiceStates
+
 	// Check if an error happened creating session
 	if err != nil {
 		log.Fatalf("Error starting bot session: %v", err)
@@ -105,10 +110,10 @@ func main() {
 	// Add tasks to cron scheduler
 	log.Println("Adding cron tasks...")
 	log.Println("Checking for new animes in the RSS feed...")
-	tasks.NotifyNewAnime(s, "1030120857030361149", &rssLastChecked)
+	tasks.NotifyNewAnime(s, animeChatID, &rssLastChecked)
 	c.AddFunc("@every 5m", func() {
 		log.Println("Checking for new animes in the RSS feed...")
-		tasks.NotifyNewAnime(s, "1030120857030361149", &rssLastChecked)
+		tasks.NotifyNewAnime(s, animeChatID, &rssLastChecked)
 	})
 
 	// Register slash commands to the bot
