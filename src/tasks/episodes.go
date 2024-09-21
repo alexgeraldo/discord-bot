@@ -107,7 +107,7 @@ func NotifyNewAnime(s *discordgo.Session, channelID string, lastCheck *time.Time
 					},
 				},
 				Timestamp: time.Now().Format(time.RFC3339),
-				Thumbnail: &discordgo.MessageEmbedThumbnail{
+				Image: &discordgo.MessageEmbedImage{
 					URL: imageURL,
 				},
 			}

@@ -21,6 +21,7 @@ var (
 	botToken       = config.GetEnv("token", "")
 	removeCommands = config.GetEnvAsBool("rmcmd", true)
 	animeChatID    = config.GetEnv("animechat", "1030120857030361149")
+	newsChatID     = config.GetEnv("newschat", "1286744761088086157")
 )
 
 // Bot commands
@@ -105,15 +106,22 @@ func main() {
 	c := cron.New()
 
 	// RSS Feed last checked memory variable
-	rssLastChecked := time.Now()
+	episodesLastChecked := time.Now()
+	newsLastChecked := time.Now()
 
 	// Add tasks to cron scheduler
 	log.Println("Adding cron tasks...")
-	log.Println("Checking for new animes in the RSS feed...")
-	tasks.NotifyNewAnime(s, animeChatID, &rssLastChecked)
+	log.Println("Checking for new animes in the animeschedule RSS feed...")
+	tasks.NotifyNewAnime(s, animeChatID, &episodesLastChecked)
+	log.Println("Checking for new articles in the crunchyroll RSS feed...")
+	tasks.NotifyNewArticle(s, newsChatID, &newsLastChecked)
 	c.AddFunc("@every 5m", func() {
-		log.Println("Checking for new animes in the RSS feed...")
-		tasks.NotifyNewAnime(s, animeChatID, &rssLastChecked)
+		log.Println("Checking for new animes in the animeschedule RSS feed...")
+		tasks.NotifyNewAnime(s, animeChatID, &episodesLastChecked)
+	})
+	c.AddFunc("@every 30m", func() {
+		log.Println("Checking for new articles in the crunchyroll RSS feed...")
+		tasks.NotifyNewArticle(s, newsChatID, &newsLastChecked)
 	})
 
 	// Register slash commands to the bot
