@@ -60,4 +60,7 @@ func NotifyNewArticle(s *discordgo.Session, channelID string, lastCheck *time.Ti
 			}
 		}
 	}
+
+	// Update last check timestamp
+	*lastCheck = time.Now()
 }
