@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/alexgeraldo/discord-bot/types"
 	"log"
 	"math/rand"
 	"time"
@@ -9,7 +10,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var ElevatorCommand = &discordgo.ApplicationCommand{
+var elevatorCommand = &discordgo.ApplicationCommand{
 	Name:        "carousel",
 	Description: "Offer a ride on the carousel to a member",
 	Options: []*discordgo.ApplicationCommandOption{
@@ -100,7 +101,7 @@ func filterVoiceChannels(channels []*discordgo.Channel, excludeChannelID string)
 	return voiceChannels
 }
 
-func ElevatorHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func elevatorHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// Get command arguments/options
 	options := i.ApplicationCommandData().Options
 	targetUser := options[0].UserValue(s)
@@ -184,7 +185,7 @@ func ElevatorHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 				return
 			}
 
-			// Wait for 1 seconds before moving to another channel
+			// Wait for 1 second before moving to another channel
 			time.Sleep(1 * time.Second)
 		}
 
@@ -202,4 +203,22 @@ func ElevatorHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			Content: fmt.Sprintf("%s vai dar uma voltinha de %d segundos no carrossel.", targetUser.Mention(), durationSeconds),
 		},
 	})
+}
+
+func RegisterElevatorCommand(s *discordgo.Session, guildID string, registeredMap map[string]types.CommandInfo) error {
+	// Create Application Command
+	elevatorCommand, err := s.ApplicationCommandCreate(s.State.User.ID, guildID, elevatorCommand)
+	if err != nil {
+		return fmt.Errorf("error creating elevator command: %v", err)
+	}
+
+	// Add Application Info to the registeredMap
+	command := types.CommandInfo{
+		Command: elevatorCommand,
+		Handler: elevatorHandler,
+	}
+	registeredMap[elevatorCommand.Name] = command
+
+	// Successful nil
+	return nil
 }

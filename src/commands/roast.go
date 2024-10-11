@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"fmt"
+	"github.com/alexgeraldo/discord-bot/types"
 	"log"
 	"math/rand"
 	"strings"
@@ -39,7 +41,7 @@ var roastList = []string{
 	"Os médicos deviam ter-te deixado na incubadora, {}, e depois apagado a luz.",
 }
 
-var RoastCommand = &discordgo.ApplicationCommand{
+var roastCommand = &discordgo.ApplicationCommand{
 	Name:        "roast",
 	Description: "Sends a roast message to the target",
 	Options: []*discordgo.ApplicationCommandOption{
@@ -52,14 +54,14 @@ var RoastCommand = &discordgo.ApplicationCommand{
 	},
 }
 
-func RoastHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func roastHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// Extract the user parameter from the interaction
 	userOption := i.ApplicationCommandData().Options[0].UserValue(s)
 
 	// Select random roast message and replace placeolder by user mention tag
 	randomRoast := strings.Replace(roastList[rand.Intn(len(roastList))], "{}", userOption.Mention(), 1)
 
-	// Answer with 'World!" to complete user message
+	// Send a specific roast message
 	log.Printf("Roasting %v with '%v' by %v \n", userOption, randomRoast, i.Member.User.Username)
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -72,4 +74,22 @@ func RoastHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func RegisterRoastCommand(s *discordgo.Session, guildID string, registeredMap map[string]types.CommandInfo) error {
+	// Create Application Command
+	roastCommand, err := s.ApplicationCommandCreate(s.State.User.ID, guildID, roastCommand)
+	if err != nil {
+		return fmt.Errorf("error creating roast command: %v", err)
+	}
+
+	// Add Application Info to the registeredMap
+	command := types.CommandInfo{
+		Command: roastCommand,
+		Handler: roastHandler,
+	}
+	registeredMap[roastCommand.Name] = command
+
+	// Successful nil
+	return nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/alexgeraldo/discord-bot/types"
 	"log"
 	"os"
 	"os/signal"
@@ -24,20 +25,7 @@ var (
 	newsChatID     = config.GetEnv("newschat", "1286744761088086157")
 )
 
-// Bot commands
-var (
-	commandsList = []*discordgo.ApplicationCommand{
-		commands.HelloCommand,
-		commands.RoastCommand,
-		commands.ElevatorCommand,
-	}
-
-	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"hello":    commands.HelloHandler,
-		"roast":    commands.RoastHandler,
-		"carousel": commands.ElevatorHandler,
-	}
-)
+var registeredCommands = make(map[string]types.CommandInfo)
 
 // Bot events
 var (
@@ -56,8 +44,8 @@ func interactionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		commandName := i.ApplicationCommandData().Name
 
 		// Execute the handler for the slash command
-		if handler, ok := commandHandlers[commandName]; ok {
-			handler(s, i)
+		if command, ok := registeredCommands[commandName]; ok {
+			command.Handler(s, i)
 
 			// Warn the admin that the handler is not implemented
 		} else {
@@ -126,13 +114,18 @@ func main() {
 
 	// Register slash commands to the bot
 	log.Println("Adding commands...")
-	registeredCommands := make([]*discordgo.ApplicationCommand, len(commandsList))
-	for i, v := range commandsList {
-		cmd, err := s.ApplicationCommandCreate(s.State.User.ID, guildID, v)
-		if err != nil {
-			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
-		}
-		registeredCommands[i] = cmd
+
+	err = commands.RegisterHelloCommand(s, guildID, registeredCommands)
+	if err != nil {
+		log.Println(err)
+	}
+	err = commands.RegisterRoastCommand(s, guildID, registeredCommands)
+	if err != nil {
+		log.Println(err)
+	}
+	err = commands.RegisterElevatorCommand(s, guildID, registeredCommands)
+	if err != nil {
+		log.Println(err)
 	}
 
 	// Start cron scheduler
@@ -148,11 +141,11 @@ func main() {
 
 	if removeCommands {
 		log.Println("Removing commands...")
-
+		fmt.Println(registeredCommands)
 		for _, v := range registeredCommands {
-			err := s.ApplicationCommandDelete(s.State.User.ID, guildID, v.ID)
+			err := s.ApplicationCommandDelete(s.State.User.ID, guildID, v.Command.ID)
 			if err != nil {
-				log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
+				log.Panicf("Cannot delete '%v' command: %v", v.Command.Name, err)
 			}
 		}
 	}
