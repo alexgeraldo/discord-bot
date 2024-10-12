@@ -15,14 +15,7 @@ import (
 )
 
 var (
-	rssSource     = "https://animeschedule.net/subrss.xml"
-	thumbnailList = []string{
-		"https://cdn.discordapp.com/attachments/808470228378845275/1286477872747380816/208942.512.webp?ex=66ee0d62&is=66ecbbe2&hm=3e10b8d6df5e68fb75576898c1721f7bca7d011ca591de2b198eddd977bba191&",
-		"https://cdn.discordapp.com/attachments/808470228378845275/1286480363547525180/Bond_Forger_Anime.webp?ex=66ee0fb4&is=66ecbe34&hm=e3ca84fcf66920cc9fae73a4d06aa20229ec8e13bf036065b18b76feea8fda05&",
-		"https://cdn.discordapp.com/attachments/808470228378845275/1286480363798925363/07193dd7b9182d275deb3b0b789e0588.png?ex=66ee0fb4&is=66ecbe34&hm=52e0180ac6e098919ee07616689fe882a3f88bc31a343287647ef6a9ce7085fd&",
-		"https://cdn.discordapp.com/attachments/808470228378845275/1286481919546232842/1656860964595.webp?ex=66ee1127&is=66ecbfa7&hm=09df550e905a152da8b552b81d661fc05ce8d90f2ac3366fc1263d9103d3f085&",
-		"https://cdn.discordapp.com/attachments/808470228378845275/1286481919868932187/subir.png?ex=66ee1127&is=66ecbfa7&hm=b6a1581a95605563974d3f182f02bf160acd9c6e15ad1c3fb2dec9d6776aa669&",
-	}
+	animescheduleEpisodesEndpoint = "https://animeschedule.net/subrss.xml"
 	// From documentation https://animeschedule.net/api/v3/documentation
 	apiBaseUrl   = "https://animeschedule.net/api/v3/anime"
 	imageBaseUrl = "https://img.animeschedule.net/production/assets/public/img"
@@ -60,14 +53,14 @@ func getAnimeCover(slug string) (string, error) {
 	return imageURL, nil
 }
 
-func NotifyNewAnime(s *discordgo.Session, channelID string, lastCheck *time.Time) {
+func AnimescheduleEpisodesNotification(s *discordgo.Session, channelID string, lastCheck *time.Time) {
 	// Parse from rss feed url
 	fp := gofeed.NewParser()
-	feed, err := fp.ParseURL(rssSource)
+	feed, err := fp.ParseURL(animescheduleEpisodesEndpoint)
 
 	// Parse anime rss feed
 	if err != nil {
-		log.Printf("An error occurred parsing: %s for %s\n", err, rssSource)
+		log.Printf("An error occurred parsing: %s for %s\n", err, animescheduleEpisodesEndpoint)
 		return
 	}
 

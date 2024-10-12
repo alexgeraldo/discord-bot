@@ -95,22 +95,27 @@ func main() {
 
 	// RSS Feed last checked memory variable
 	episodesLastChecked := time.Now()
-	newsLastChecked := time.Now()
+	now := time.Now()
+	newsLastChecked := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()) //time.Now()
 
 	// Add tasks to cron scheduler
 	log.Println("Adding cron tasks...")
-	log.Println("Checking for new animes in the animeschedule RSS feed...")
-	tasks.NotifyNewAnime(s, animeChatID, &episodesLastChecked)
-	log.Println("Checking for new articles in the crunchyroll RSS feed...")
-	tasks.NotifyNewArticle(s, newsChatID, &newsLastChecked)
-	c.AddFunc("@every 5m", func() {
-		log.Println("Checking for new animes in the animeschedule RSS feed...")
-		tasks.NotifyNewAnime(s, animeChatID, &episodesLastChecked)
+
+	tasks.CrunchyrollEpisodesNotification(s, animeChatID, &episodesLastChecked)
+	_, err = c.AddFunc("@every 5m", func() {
+		tasks.CrunchyrollEpisodesNotification(s, animeChatID, &episodesLastChecked)
 	})
-	c.AddFunc("@every 30m", func() {
-		log.Println("Checking for new articles in the crunchyroll RSS feed...")
-		tasks.NotifyNewArticle(s, newsChatID, &newsLastChecked)
+	if err != nil {
+		log.Fatalf("Error adding crunchyroll episodes to cron tasks: %v", err)
+	}
+
+	tasks.CrunchyrollArticlesNotification(s, newsChatID, &newsLastChecked)
+	_, err = c.AddFunc("@every 30m", func() {
+		tasks.CrunchyrollArticlesNotification(s, newsChatID, &newsLastChecked)
 	})
+	if err != nil {
+		log.Fatalf("Error adding crunchyroll articles to cron tasks: %v", err)
+	}
 
 	// Register slash commands to the bot
 	log.Println("Adding commands...")
