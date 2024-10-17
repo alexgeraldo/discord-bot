@@ -90,6 +90,8 @@ func CrunchyrollEpisodesNotification(s *discordgo.Session, channelID string, las
 }
 
 func CrunchyrollArticlesNotification(s *discordgo.Session, channelID string, lastCheck *time.Time) {
+	log.Println("Checking for new articles in the Crunchyroll RSS feed...")
+
 	// Parse from rss feed url
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(crunchyNewsEndpoint)
