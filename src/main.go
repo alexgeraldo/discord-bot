@@ -95,8 +95,7 @@ func main() {
 
 	// RSS Feed last checked memory variable
 	episodesLastChecked := time.Now()
-	now := time.Now()
-	newsLastChecked := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()) //time.Now()
+	newsLastChecked := time.Now()
 
 	// Add tasks to cron scheduler
 	log.Println("Adding cron tasks...")
@@ -109,12 +108,12 @@ func main() {
 		log.Fatalf("Error adding crunchyroll episodes to cron tasks: %v", err)
 	}
 
-	tasks.CrunchyrollArticlesNotification(s, newsChatID, &newsLastChecked)
+	tasks.OtakuArticlesNotification(s, newsChatID, &newsLastChecked)
 	_, err = c.AddFunc("@every 30m", func() {
-		tasks.CrunchyrollArticlesNotification(s, newsChatID, &newsLastChecked)
+		tasks.OtakuArticlesNotification(s, newsChatID, &newsLastChecked)
 	})
 	if err != nil {
-		log.Fatalf("Error adding crunchyroll articles to cron tasks: %v", err)
+		log.Fatalf("Error adding otakupt articles to cron tasks: %v", err)
 	}
 
 	// Register slash commands to the bot
